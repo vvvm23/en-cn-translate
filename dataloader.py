@@ -3,6 +3,9 @@ import numpy as np
 import unicodedata
 import sys
 
+# A lot of the preprocessing inspired from https://pytorch.org/tutorials/beginner/transformer_tutorial.html
+# I removed some bits that seemed unnecessary and added some extras
+
 # object used to strip all punctuation in unicode range
 tbl = dict.fromkeys(i for i in range(sys.maxunicode)
                       if unicodedata.category(chr(i)).startswith('P'))
@@ -45,14 +48,19 @@ class Tokenizer:
         s = remove_punctuation(s).lower()
         return [self.word_index[w] for w in (split_string(s, self.by_word))]
 
+# Class that implements torch.utils.data.Dataset and so can be loaded using a dataloader
 class LangDataset(torch.utils.data.Dataset):
     def __init__(self, path):
         self.path = path
 
+        # Initialise tokenziers for english and chinese respectively
         self.token_in = Tokenizer(by_word=True)
         self.token_out = Tokenizer(by_word=False)
-
+        
+        # open the dataset file from the specified path (read, magic string)
         lines = open("data/cmn.txt").readlines()
+
+        # file is tab delimited so split by tab
         pairs = [[s for s in l.split('\t')] for l in lines]
         
         self.length = len(pairs)
@@ -60,6 +68,9 @@ class LangDataset(torch.utils.data.Dataset):
         self.max_in = 0
         self.max_out = 0
 
+
+        # for all pairs, add the sentence to the tokenizers
+        # keep track of the maximum length seen so we can add the correct amount of padding later
         for p in pairs:
             self.token_in._add_sentence(p[0])
             if len(p[0]) > self.max_in:
@@ -69,12 +80,15 @@ class LangDataset(torch.utils.data.Dataset):
             if len(p[1]) > self.max_out:
                 self.max_out = len(split_string(p[1], self.token_out.by_word))
 
+        # initialise data tensors of all pad
         self.data_in = torch.zeros(self.length, self.max_in + 2)
         self.data_out = torch.zeros(self.length, self.max_out + 3)
 
+        # again, enumerate through all pairs and add them to the tensors
         for i, p in enumerate(pairs):
             self._add_pair(i, p)
 
+    # function to add a tokenized pair to the tensors at a given index
     def _add_pair(self, i, p):
         p[0] = remove_punctuation(p[0]).lower()
         p[1] = remove_punctuation(p[1]).lower()
@@ -82,8 +96,9 @@ class LangDataset(torch.utils.data.Dataset):
         p0_len = len(split_string(p[0], self.token_in.by_word)) + 2
         p1_len = len(split_string(p[1], self.token_out.by_word)) + 3
 
-        self.data_in[i, :p0_len] = torch.tensor([1] + [self.token_in.word_index[w] for w in (split_string(p[0], self.token_in.by_word))] + [2])
-        self.data_out[i, :p1_len] = torch.tensor([1] + [self.token_out.word_index[w] for w in (split_string(p[1], self.token_out.by_word))] + [2, 0])
+        # tokenize the input pair and add to the tensor. Apply padding, sos and eos tokens as required
+        self.data_in[i, :p0_len] = torch.tensor([1] + self.token_in._sentence_to_index(p[0]) + [2])
+        self.data_out[i, :p1_len] = torch.tensor([1] + self.token_out._sentence_to_index(p[1]) + [2, 0])
 
     def __len__(self):
         return self.length
