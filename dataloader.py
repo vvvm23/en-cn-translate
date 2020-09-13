@@ -3,7 +3,7 @@ import numpy as np
 import unicodedata
 import sys
 
-# A lot of the preprocessing inspired from https://pytorch.org/tutorials/beginner/transformer_tutorial.html
+# A lot of the preprocessing inspired from https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html
 # I removed some bits that seemed unnecessary and added some extras
 
 # object used to strip all punctuation in unicode range
