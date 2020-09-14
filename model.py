@@ -26,7 +26,7 @@ class PositionalEncoding(nn.Module):
 # based on the model architecture defined in Attention is All You Need (Vaswani et. al.)
 # https://arxiv.org/abs/1706.03762
 class LangTransformer(nn.Module):
-    def __init__(self, src_dim, tgt_dim, emd_dim, device):
+    def __init__(self, src_dim, tgt_dim, emd_dim, hidden_dim, device):
         super().__init__()
         self.device = device # store reference to device for creating masks later
         self.mask_tgt = None
@@ -38,7 +38,7 @@ class LangTransformer(nn.Module):
         self.pos_tgt = PositionalEncoding(emd_dim)
 
         # Main transformer module 
-        self.transformer = nn.Transformer(emd_dim)
+        self.transformer = nn.Transformer(emd_dim, 8, 6, 6, hidden_dim)
 
         # Fully connected output layer that is applied identically across all time steps
         self.linear = nn.Linear(emd_dim, tgt_dim)

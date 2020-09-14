@@ -13,7 +13,8 @@ TRY_CUDA = True
 NB_EPOCHS = 40
 BATCH_SIZE = 64
 NB_TEST = 1000
-EMD_DIM = 512 # should be a multiple of 8 (or nb_heads)
+NB_HIDDEN = 2056
+EMD_DIM = 1024 # should be a multiple of 8 (or nb_heads)
 
 # Get the CUDA device if available
 device = torch.device('cuda:0' if TRY_CUDA and torch.cuda.is_available() else 'cpu')
@@ -34,7 +35,7 @@ train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_S
 test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=8)
 
 # Intialise the Transformer model
-model = LangTransformer(src_dim, tgt_dim, EMD_DIM, device).to(device)
+model = LangTransformer(src_dim, tgt_dim, EMD_DIM, NB_HIDDEN, device).to(device)
 model.train()
 
 # Define criteria and optimiser
