@@ -13,6 +13,7 @@ dataset = LangDataset("data/cmn.txt")
 print(f"> Initialised tokenizer.")
 
 model = torch.load(sys.argv[1]).to(device)
+model.eval()
 print(f"> Loaded model {sys.argv[1]} from file.")
 
 while True:
@@ -24,9 +25,9 @@ while True:
         break
 
     eng_input = remove_punctuation(eng_input).lower()
-    eng_input = eng_input.split(' ')
+    # eng_input = eng_input.split(' ')
     try:
-        eng_input = torch.tensor([1] + [dataset.token_in.word_index[w] for w in eng_input] + [2] + [0]*(dataset.max_in - len(eng_input))).to(device)
+        eng_input = torch.tensor([1] + dataset.token_in._sentence_to_index(eng_input) + [2] + [0]*(dataset.max_in - len(eng_input))).to(device)
     except KeyError as e:
         print("! One or more words was not recognised!")
         continue
