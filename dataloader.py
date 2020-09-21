@@ -68,7 +68,6 @@ class LangDataset(torch.utils.data.Dataset):
         self.max_in = 0
         self.max_out = 0
 
-
         # for all pairs, add the sentence to the tokenizers
         # keep track of the maximum length seen so we can add the correct amount of padding later
         for p in pairs:
@@ -81,8 +80,9 @@ class LangDataset(torch.utils.data.Dataset):
                 self.max_out = len(split_string(p[1], self.token_out.by_word))
 
         # initialise data tensors of all pad
-        self.data_in = torch.zeros(self.length, self.max_in + 2)
-        self.data_out = torch.zeros(self.length, self.max_out + 3)
+        self.data_src = torch.zeros(self.length, self.max_in)
+        self.data_tgt = torch.zeros(self.length, self.max_out + 1)
+        self.data_out = torch.zeros(self.length, self.max_out + 1)
 
         # again, enumerate through all pairs and add them to the tensors
         for i, p in enumerate(pairs):
@@ -93,15 +93,16 @@ class LangDataset(torch.utils.data.Dataset):
         p[0] = remove_punctuation(p[0]).lower()
         p[1] = remove_punctuation(p[1]).lower()
 
-        p0_len = len(split_string(p[0], self.token_in.by_word)) + 2
-        p1_len = len(split_string(p[1], self.token_out.by_word)) + 3
+        p0_len = len(split_string(p[0], self.token_in.by_word))
+        p1_len = len(split_string(p[1], self.token_out.by_word)) + 1
 
         # tokenize the input pair and add to the tensor. Apply padding, sos and eos tokens as required
-        self.data_in[i, :p0_len] = torch.tensor([1] + self.token_in._sentence_to_index(p[0]) + [2])
-        self.data_out[i, :p1_len] = torch.tensor([1] + self.token_out._sentence_to_index(p[1]) + [2, 0])
+        self.data_src[i, :p0_len] = torch.tensor(self.token_in._sentence_to_index(p[0]))
+        self.data_tgt[i, :p1_len] = torch.tensor([1] + self.token_out._sentence_to_index(p[1]))
+        self.data_out[i, :p1_len] = torch.tensor(self.token_out._sentence_to_index(p[1]) + [2])
 
     def __len__(self):
         return self.length
 
     def __getitem__(self, idx):
-        return self.data_in[idx], self.data_out[idx]
+        return self.data_src[idx], self.data_tgt[idx], self.data_out[idx]

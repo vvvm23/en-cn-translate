@@ -33,7 +33,7 @@ while True:
     eng_input = remove_punctuation(eng_input).lower()
     try:
         # Attempt to tokenize the input sentence
-        eng_input = torch.tensor([1] + dataset.token_in._sentence_to_index(eng_input) + [2] + [0]*(dataset.max_in - len(eng_input))).to(device)
+        eng_input = torch.tensor(dataset.token_in._sentence_to_index(eng_input) + [0]*(dataset.max_in - len(eng_input))).to(device)
     except KeyError as e:
         # If we don't recognise a token, continue the loop to prompt for a new input
         print("! One or more words was not recognised!")
@@ -43,7 +43,7 @@ while True:
         raise e
 
     # Initialise tgt to just the SOS token
-    tgt = torch.tensor([1] + [0]*(dataset.max_out+2)).to(device)
+    tgt = torch.tensor([1] + [0]*(dataset.max_out)).to(device)
 
     # Add a batch dimension to both src and tgt
     eng_input, tgt = eng_input.unsqueeze(0), tgt.unsqueeze(0)

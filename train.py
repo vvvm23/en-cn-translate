@@ -10,7 +10,7 @@ import time
 
 # some constant parameters
 TRY_CUDA = True
-NB_EPOCHS = 40
+NB_EPOCHS = 100
 BATCH_SIZE = 64
 NB_TEST = 1000
 NB_HIDDEN = 2056
@@ -47,19 +47,20 @@ def evaluate(model, dataloader):
     model.eval()
     total_loss = 0.0
 
-    for i, (src, tgt) in enumerate(dataloader):
+    for i, (src, tgt, out) in enumerate(dataloader):
         # Move data to target device
         src = src.type(torch.LongTensor).to(device)
         tgt = tgt.type(torch.LongTensor).to(device)
+        out = out.type(torch.LongTensor).to(device)
 
-        out = model(src, tgt)
+        pred = model(src, tgt)
 
         # smush batch and time dimensions into one single dimension    
-        out = out.reshape(-1, tgt_dim)
-        tgt = tgt.reshape(-1)
+        pred = pred.reshape(-1, tgt_dim)
+        out = out.reshape(-1)
 
         # ignore the last of output and ignore the SOS in tgt (my version of shifting to the right)
-        loss = crit(out[:-1], tgt[1:])
+        loss = crit(pred, out)
         total_loss += loss.item()
 
     model.train()
@@ -71,22 +72,23 @@ for ei in range(NB_EPOCHS):
     print(f"> Epoch {ei+1}/{NB_EPOCHS}")
     total_loss = 0.0
     pbar = tqdm.tqdm(total=len(train_dataloader))
-    for i, (src, tgt) in enumerate(train_dataloader):
+    for i, (src, tgt, out) in enumerate(train_dataloader):
         # Move data to target device
         src = src.type(torch.LongTensor).to(device)
         tgt = tgt.type(torch.LongTensor).to(device)
+        out = out.type(torch.LongTensor).to(device)
 
         # Zero the optimiser
         optim.zero_grad()
 
-        out = model(src, tgt)
+        pred = model(src, tgt)
     
         # smush batch and time dimensions into one single dimension    
-        out = out.reshape(-1, tgt_dim)
-        tgt = tgt.reshape(-1)
+        pred = pred.reshape(-1, tgt_dim)
+        out = out.reshape(-1)
 
         # ignore the last of output and ignore the SOS in tgt (my version of shifting to the right)
-        loss = crit(out[:-1], tgt[1:])
+        loss = crit(pred, out)
 
         # increment total training loss and backpropagate
         total_loss += loss.item()
