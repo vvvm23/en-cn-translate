@@ -35,7 +35,7 @@ train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_S
 test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=8)
 
 # Intialise the Transformer model
-model = LangTransformer(src_dim, tgt_dim, EMD_DIM, NB_HIDDEN, device).to(device)
+model = LangTransformer(src_dim, tgt_dim, EMD_DIM, NB_HIDDEN, device, dropout=0.5).to(device)
 model.train()
 
 # Define criteria and optimiser
