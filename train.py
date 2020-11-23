@@ -7,6 +7,7 @@ from model import LangTransformer
 
 import tqdm
 import time
+import copy
 
 # some constant parameters
 TRY_CUDA = True
@@ -15,6 +16,7 @@ BATCH_SIZE = 64
 NB_TEST = 1000
 NB_HIDDEN = 2056
 EMD_DIM = 1024 # should be a multiple of 8 (or nb_heads)
+EARLY_STOP_THRESHOLD = 5
 
 # Get the CUDA device if available
 device = torch.device('cuda:0' if TRY_CUDA and torch.cuda.is_available() else 'cpu')
@@ -35,12 +37,12 @@ train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_S
 test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=8)
 
 # Intialise the Transformer model
-model = LangTransformer(src_dim, tgt_dim, EMD_DIM, NB_HIDDEN, device, dropout=0.5).to(device)
+model = LangTransformer(src_dim, tgt_dim, EMD_DIM, NB_HIDDEN, device, dropout=0.3).to(device)
 model.train()
 
 # Define criteria and optimiser
 crit = torch.nn.CrossEntropyLoss()
-optim = torch.optim.Adam(model.parameters(), lr=0.0001)
+optim = torch.optim.Adam(model.parameters(), lr=0.001)
 
 # Function that evaluates the model and returns the average loss
 def evaluate(model, dataloader):
@@ -67,6 +69,10 @@ def evaluate(model, dataloader):
     return total_loss / len(dataloader)
 
 save_id = int(time.time())
+
+best_loss = 999.9
+loss_fail_count = 0
+best_model = copy.deepcopy(model)
 
 for ei in range(NB_EPOCHS):
     print(f"> Epoch {ei+1}/{NB_EPOCHS}")
@@ -98,12 +104,26 @@ for ei in range(NB_EPOCHS):
         optim.step()
         pbar.update(1)
     
+    eval_loss = evaluate(model, test_dataloader)
+
+    if eval_loss <= best_loss:
+        best_loss = eval_loss
+        loss_fail_count = 0
+        best_model = copy.deepcopy(model)
+    else:
+        loss_fail_count += 1
+
     print(f"> Training Loss: {total_loss / len(train_dataloader)}")
-    print(f"> Validation Loss: {evaluate(model, test_dataloader)}\n")
+    print(f"> Validation Loss: {eval_loss}\n")
 
     # Save the model at the end of every epoch
     torch.save(model, f"models/{save_id}-{ei}.pt")
 
+    if loss_fail_count >= EARLY_STOP_THRESHOLD:
+        print("> Early stopping threshold reached. Halting training.")
+        break
+
     total_loss = 0.0
 
+torch.save(model, f"models/{save_id}-best.pt")
 print("> Training complete.")
